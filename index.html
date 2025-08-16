@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1,maximum-scale=1" />
+  <title>Senpai — TikTok Video Download</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg1: #061123;
+      --bg2: #081428;
+      --accent: linear-gradient(90deg,#ff4d6d,#7c3aed);
+      --glass: rgba(255,255,255,0.06);
+      --glass-2: rgba(255,255,255,0.02);
+      --muted: rgba(230,238,248,0.7);
+      --text: #e6eef8;
+      --success: #10b981;
+      --danger: #ef4444;
+      --card-radius: 16px;
+      --max-width: 980px;
+    }
+    [data-theme="light"]{
+      --bg1: #f6f9fc;
+      --bg2: #e7f0fb;
+      --glass: rgba(255,255,255,0.7);
+      --glass-2: rgba(255,255,255,0.9);
+      --muted: rgba(20,30,45,0.6);
+      --text: #071127;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;color:var(--text);background:linear-gradient(180deg,var(--bg1),var(--bg2));-webkit-font-smoothing:antialiased;}
+    /* particles canvas full screen behind everything */
+    #bg-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+    /* container */
+    .wrap{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{width:100%;max-width:var(--max-width);background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));border-radius:var(--card-radius);padding:18px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.06);box-shadow:0 12px 40px rgba(2,6,23,0.55)}
+    header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#ff4d6d,#7c3aed);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:18px;box-shadow:0 8px 30px rgba(124,58,237,0.12)}
+    h1{font-size:18px;margin:0}
+    .sub{font-size:13px;color:var(--muted);margin-top:2px}
+    .actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+    .theme-toggle{display:inline-flex;align-items:center;gap:8px;padding:6px;border-radius:999px;background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent);border:1px solid rgba(255,255,255,0.04);cursor:pointer}
+    .switch{width:44px;height:26px;background:rgba(0,0,0,0.12);padding:3px;border-radius:999px;display:flex;align-items:center}
+    .knob{width:20px;height:20px;background:white;border-radius:50%;transform:translateX(0);transition:transform .28s cubic-bezier(.2,.9,.2,1)}
+    .switch.on{background:linear-gradient(90deg,#a78bfa,#fb7185)}
+    .switch.on .knob{transform:translateX(18px)}
+    /* main layout */
+    main{display:grid;grid-template-columns:1fr 360px;gap:16px;margin-top:16px}
+    @media(max-width:920px){main{grid-template-columns:1fr;}.actions{width:100%;justify-content:flex-end}}
+    /* left column (search & preview) */
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.04)}
+    .input-row{display:flex;gap:8px;align-items:center}
+    input[type="text"]{flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));color:var(--text);outline:none;font-size:14px;backdrop-filter:blur(6px)}
+    input[type="text"]::placeholder{color:rgba(255,255,255,0.5)}
+    .btn{padding:10px 14px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;box-shadow:0 8px 30px rgba(124,58,237,0.14);transition:transform .12s,opacity .12s}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
+    .btn:active{transform:translateY(2px)}
+    .hint{font-size:13px;color:var(--muted);margin-top:10px}
+    /* preview card */
+    .preview{display:flex;gap:12px;align-items:flex-start;margin-top:12px}
+    .thumb{width:140px;height:140px;border-radius:10px;object-fit:cover;border:1px solid rgba(255,255,255,0.04);flex-shrink:0;background:linear-gradient(90deg,#0f172a,#071020)}
+    .meta{flex:1}
+    .meta h3{margin:0;font-size:16px;line-height:1.2}
+    .meta p{margin:8px 0 0;color:var(--muted);font-size:13px}
+    .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .chip{padding:6px 9px;border-radius:999px;font-size:13px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04)}
+    .download-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+    .progress{height:10px;border-radius:999px;background:rgba(0,0,0,0.08);overflow:hidden;margin-top:10px}
+    .progress > i{display:block;height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,#60a5fa,#7c3aed);transition:width .22s}
+    /* right column (guide + promo) */
+    aside{height:100%}
+    .guide h4{margin:0 0 8px 0}
+    .guide p{color:var(--muted);font-size:14px}
+    .promo{margin-top:12px;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.04);display:flex;gap:12px;align-items:center}
+    .youtube-btn{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:#ff0000;color:white;font-weight:700;text-decoration:none}
+    .watermark{margin-top:14px;font-size:12px;color:var(--muted);text-align:center}
+    /* floating youtube circle */
+    .floating-yt{position:fixed;right:18px;bottom:18px;z-index:6;width:54px;height:54px;border-radius:50%;background:linear-gradient(90deg,#ff0000,#ff6b6b);display:flex;align-items:center;justify-content:center;color:white;box-shadow:0 12px 30px rgba(0,0,0,0.3);cursor:pointer;transition:transform .12s}
+    .floating-yt:hover{transform:translateY(-6px)}
+    /* loading spinner */
+    .spinner{width:36px;height:36px;border-radius:50%;border:4px solid rgba(255,255,255,0.08);border-top-color:rgba(255,255,255,0.28);animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    /* subtle animations */
+    .pop{animation:popin .28s cubic-bezier(.2,.9,.2,1)}
+    @keyframes popin{0%{transform:scale(.98);opacity:0}100%{transform:scale(1);opacity:1}}
+    /* accessibility focus */
+    input:focus,button:focus,a:focus{outline:4px solid rgba(99,102,241,0.08)}
+  </style>
+</head>
+<body data-theme="dark">
+  <!-- particle canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <div class="wrap">
+    <div class="card pop" role="main" aria-label="Senpai TikTok Downloader">
+      <header>
+        <div class="brand">
+          <div class="logo">S</div>
+          <div>
+            <h1>Senpai TikTok Video Download</h1>
+            <div class="sub">Paste link dia preview dekho — download option pabe (backend lage)</div>
+          </div>
+        </div>
+
+        <div class="actions" role="toolbar" aria-label="Actions">
+          <div class="theme-toggle" id="themeToggle" title="Toggle Day / Night">
+            <span style="font-size:13px;color:var(--muted)">Day</span>
+            <div id="switch" class="switch" role="button" tabindex="0" aria-pressed="false" style="margin:0 8px">
+              <div class="knob"></div>
+            </div>
+            <span style="font-size:13px;color:var(--muted)">Night</span>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section>
+          <div class="panel">
+            <div class="input-row">
+              <input id="linkInput" type="text" placeholder="TikTok link paste korun — উদাহরণ: https://www.tiktok.com/@user/video/123..." aria-label="TikTok link input" />
+              <button id="analyzeBtn" class="btn" aria-label="Analyze link">Analyze</button>
+              <button id="clipBtn" class="btn secondary" title="Auto-detect from clipboard">Auto-detect</button>
+            </div>
+
+            <div class="hint">Hint: কোনো লম্বা টেক্সট পেস্ট করলেও আমি লিঙ্ক detect করে নেবো।</div>
+
+            <!-- preview placeholder -->
+            <div id="previewArea" class="preview" style="display:none;">
+              <img id="thumb" class="thumb" src="" alt="video thumbnail" />
+              <div class="meta">
+                <h3 id="title">Title</h3>
+                <p id="author">Author</p>
+                <div id="caption" style="margin-top:8px;color:var(--muted);font-size:13px"></div>
+                <div class="tags" id="metaTags" aria-hidden="true"></div>
+                <div class="download-row">
+                  <button id="downloadVideo" class="btn">Download Video</button>
+                  <button id="downloadAudio" class="btn secondary">Download Audio</button>
+                  <button id="downloadThumb" class="btn secondary">Download Thumb</button>
+                </div>
+                <div class="progress" aria-hidden><i id="progressBar"></i></div>
+              </div>
+            </div>
+
+            <div id="emptyState" style="display:flex;gap:12px;align-items:center;margin-top:14px">
+              <div style="width:46px;height:46px;border-radius:10px;background:linear-gradient(90deg,#7c3aed,#ff4d6d);display:flex;align-items:center;justify-content:center;color:white;font-weight:700">TT</div>
+              <div>
+                <div style="font-weight:600">No video detected yet</div>
+                <div style="color:var(--muted);font-size:13px;margin-top:6px">Paste a TikTok link above and press Analyze. আমি auto-detect করে preview দেখাবো।</div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <aside>
+          <div class="panel guide">
+            <h4>কিভাবে ব্যবহার করবেন</h4>
+            <p>1) TikTok ভিডিওর লিঙ্ক কপি করে নিচের বক্সে paste করুন.<br>
+               2) Analyze চাপুন — preview ও ডাউনলোড বাটন দেখাবে (প্রকৃত ডাউনলোডের জন্য backend লাগবে).<br>
+               3) যদি তুমি চাই Node/Termux backend, আমি সেটাও দিয়ে দিতে পারি।</p>
+
+            <div class="promo" style="margin-top:10px;">
+              <div style="flex:1">
+                <div style="font-weight:700">Visit YouTube Channel</div>
+                <div style="color:var(--muted);font-size:13px;margin-top:6px">Subscribe korte vulbe na — Free Fire &amp; Tech. 🎮</div>
+              </div>
+              <a class="youtube-btn" id="ytLink" href="https://youtube.com/@gamer_senpai2?si=Rb6bNk4CzMlDajV4" target="_blank" rel="noopener">YouTube</a>
+            </div>
+
+            <div class="watermark">⚡ Created by <strong>Senpai</strong> · Use responsibly</div>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </div>
+
+  <!-- floating youtube -->
+  <a id="floatingYT" class="floating-yt" href="https://youtube.com/@gamer_senpai2?si=Rb6bNk4CzMlDajV4" target="_blank" rel="noopener" title="Visit YouTube">
+    ▶
+  </a>
+
+  <script>
+    /* ---------------------------
+       Particle background (canvas)
+       responsive, will not crop
+       --------------------------- */
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const colors = ['#7c3aed','#60a5fa','#ff4d6d','#f97316','#22c55e'];
+    function resizeCanvas(){
+      canvas.width = innerWidth;
+      canvas.height = innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function rand(min,max){ return Math.random() * (max-min) + min; }
+    function createParticles(){
+      particles = [];
+      const count = Math.round((canvas.width * canvas.height) / 90000); // adaptive density
+      for(let i=0;i<count;i++){
+        particles.push({
+          x: rand(0,canvas.width),
+          y: rand(0,canvas.height),
+          r: rand(0.8,3.6),
+          vx: rand(-0.2,0.6),
+          vy: rand(-0.15,0.15),
+          hue: colors[Math.floor(Math.random()*colors.length)],
+          alpha: rand(0.06,0.28),
+          drift: rand(-0.2,0.2)
+        });
+      }
+    }
+    createParticles();
+
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // soft gradient overlay for depth
+      const g = ctx.createLinearGradient(0,0,0,canvas.height);
+      g.addColorStop(0, 'rgba(10,12,20,0.12)');
+      g.addColorStop(1, 'rgba(2,6,23,0.6)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+
+      for(const p of particles){
+        p.x += p.vx + Math.sin(Date.now()/5000 + p.y/1000) * p.drift;
+        p.y += p.vy;
+        if(p.x > canvas.width + 20) p.x = -20;
+        if(p.x < -20) p.x = canvas.width + 20;
+        if(p.y > canvas.height + 20) p.y = -20;
+        if(p.y < -20) p.y = canvas.height + 20;
+
+        ctx.beginPath();
+        ctx.fillStyle = p.hue;
+        ctx.globalAlpha = p.alpha;
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    // regenerate on orientation change/resize
+    let resizeTimer;
+    window.addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(()=>createParticles(),200) });
+
+    /* ---------------------------
+       UI logic: auto-detect, analyze
+       --------------------------- */
+    const linkInput = document.getElementById('linkInput');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const clipBtn = document.getElementById('clipBtn');
+    const previewArea = document.getElementById('previewArea');
+    const emptyState = document.getElementById('emptyState');
+    const thumb = document.getElementById('thumb');
+    const titleEl = document.getElementById('title');
+    const authorEl = document.getElementById('author');
+    const captionEl = document.getElementById('caption');
+    const metaTags = document.getElementById('metaTags');
+    const downloadVideo = document.getElementById('downloadVideo');
+    const downloadAudio = document.getElementById('downloadAudio');
+    const downloadThumb = document.getElementById('downloadThumb');
+    const progressBar = document.getElementById('progressBar');
+    const switchEl = document.getElementById('switch');
+    const themeToggle = document.getElementById('themeToggle');
+
+    // try extracting tiktok links from any text
+    function extractTikTokUrl(text){
+      if(!text) return null;
+      const re = /(https?:\/\/(?:www\.)?tiktok\.com\/[^\s'"]+|https?:\/\/(?:vm|m)\.tiktok\.com\/[^\s'"]+)/i;
+      const m = text.match(re);
+      return m ? m[0] : null;
+    }
+
+    function parseVideoId(url){
+      try{
+        const m = url.match(/video\/(\d+)/);
+        if(m) return m[1];
+        return null;
+      }catch(e){return null}
+    }
+
+    // fake metadata (demo) — replace with real backend fetch
+    async function fetchMetaDemo(url){
+      // simulate network delay
+      await new Promise(r=>setTimeout(r,700));
+      return {
+        title: 'Demo TikTok Title — Beautiful short clip',
+        author: '@demo_user',
+        thumbnail: 'https://via.placeholder.com/480x480.png?text=TikTok+Thumbnail',
+        views: '1.2M',
+        likes: '120K',
+        comments: '4.2K',
+        duration: '00:15',
+        caption: 'Demo caption: enjoy this awesome clip! #demo #senpai',
+        directVideo: '', // put direct mp4 url here from your backend
+        directAudio: ''  // optional
+      }
+    }
+
+    async function analyze(){
+      const raw = linkInput.value.trim();
+      const url = extractTikTokUrl(raw);
+      if(!url){
+        alert('Valid TikTok link paowa jacche na. Link ta check korun.');
+        return;
+      }
+
+      // UI: show loading
+      emptyState.style.display='none';
+      previewArea.style.display='flex';
+      titleEl.textContent = 'Loading...';
+      authorEl.textContent = '';
+      captionEl.textContent = '';
+      thumb.src = '';
+      metaTags.innerHTML = '<div class="spinner"></div>';
+
+      try{
+        // Replace below with your backend call:
+        // const resp = await fetch('/api/fetch?url='+encodeURIComponent(url));
+        // const data = await resp.json();
+        const data = await fetchMetaDemo(url);
+
+        // update UI
+        titleEl.textContent = data.title || 'Untitled';
+        authorEl.textContent = `${data.author || ''} · ${data.views || ''} views`;
+        captionEl.textContent = data.caption || '';
+        thumb.src = data.thumbnail || '';
+        metaTags.innerHTML = '';
+        const chips = [
+          (data.duration? data.duration : null),
+          (data.likes? '❤ '+data.likes : null),
+          (data.comments? '💬 '+data.comments : null)
+        ].filter(Boolean);
+        for(const c of chips){
+          const el = document.createElement('div'); el.className='chip'; el.textContent=c; metaTags.appendChild(el);
+        }
+
+        // store direct links (if backend supplies)
+        downloadVideo.dataset.direct = data.directVideo || '';
+        downloadAudio.dataset.direct = data.directAudio || '';
+        downloadThumb.dataset.direct = data.thumbnail || '';
+
+        // change button styles if direct links missing
+        if(!data.directVideo){
+          downloadVideo.textContent = 'Download (Backend needed)';
+          downloadVideo.classList.remove('btn'); downloadVideo.classList.add('btn','secondary');
+        }else{
+          downloadVideo.textContent = 'Download Video';
+          downloadVideo.classList.remove('secondary'); downloadVideo.classList.add('btn');
+        }
+      }catch(err){
+        alert('Error fetching metadata. Backend naki configure kora nai?');
+        previewArea.style.display='none';
+        emptyState.style.display='flex';
+      }
+    }
+
+    analyzeBtn.addEventListener('click', analyze);
+
+    // clipboard auto-detect
+    clipBtn.addEventListener('click', async ()=>{
+      try{
+        const txt = await navigator.clipboard.readText();
+        const url = extractTikTokUrl(txt);
+        if(url){ linkInput.value = url; analyze(); } else { alert('Clipboard-e kono TikTok link paowa jay nai.'); }
+      }catch(e){
+        alert('Clipboard access na paowa gelo. Manual paste korun.');
+      }
+    });
+
+    // pressing Enter in input triggers analyze
+    linkInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ analyze(); e.preventDefault(); } });
+
+    // downloads (UI simulation)
+    function simulateProgress(){
+      progressBar.style.width = '0%';
+      let p = 0;
+      const t = setInterval(()=>{
+        p += Math.random()*18;
+        p = Math.min(p,96);
+        progressBar.style.width = p + '%';
+        if(p >= 96){ clearInterval(t); progressBar.style.width = '100%'; setTimeout(()=>progressBar.style.width='0%',600); }
+      },220);
+    }
+
+    downloadVideo.addEventListener('click', ()=>{
+      const direct = downloadVideo.dataset.direct;
+      if(!direct){ alert('Direct download URL pawa jacche na. Ami backend code diye dite pari.'); return; }
+      // real behaviour: open direct link to download
+      simulateProgress();
+      const a = document.createElement('a'); a.href = direct; a.download = 'tiktok_video.mp4'; document.body.appendChild(a); a.click(); a.remove();
+    });
+
+    downloadAudio.addEventListener('click', ()=>{
+      const direct = downloadAudio.dataset.direct;
+      if(!direct){ alert('Audio URL not available. Backend diye mp3 extract korte hobe.'); return; }
+      simulateProgress();
+      const a = document.createElement('a'); a.href = direct; a.download = 'tiktok_audio.mp3'; document.body.appendChild(a); a.click(); a.remove();
+    });
+
+    downloadThumb.addEventListener('click', ()=>{
+      const direct = downloadThumb.dataset.direct;
+      if(!direct){ alert('Thumbnail not available.'); return; }
+      const a = document.createElement('a'); a.href = direct; a.download = 'thumbnail.jpg'; document.body.appendChild(a); a.click(); a.remove();
+    });
+
+    // auto-detect link on paste
+    linkInput.addEventListener('paste', (e)=>{
+      setTimeout(()=>{
+        const url = extractTikTokUrl(linkInput.value);
+        if(url){
+          linkInput.style.boxShadow = '0 8px 30px rgba(124,58,237,0.12)';
+          // optional: auto-analyze on paste
+          // analyze();
+        } else {
+          linkInput.style.boxShadow = 'none';
+        }
+      },50);
+    });
+
+    /* ---------------------------
+       Theme toggle (day/night)
+       --------------------------- */
+    function setTheme(isLight){
+      if(isLight){
+        document.body.setAttribute('data-theme','light');
+        switchEl.classList.add('on'); switchEl.setAttribute('aria-pressed','true');
+      }else{
+        document.body.setAttribute('data-theme','dark');
+        switchEl.classList.remove('on'); switchEl.setAttribute('aria-pressed','false');
+      }
+    }
+    switchEl.addEventListener('click', ()=> setTheme(!switchEl.classList.contains('on')));
+    themeToggle.addEventListener('keypress', (e)=>{ if(e.key==='Enter' || e.key===' ') switchEl.click(); });
+
+    // init theme
+    setTheme(false);
+
+    /* ---------------------------
+       Accessibility / small helpers
+       --------------------------- */
+    // auto-detect if user pastes long text containing link anywhere on the page
+    document.addEventListener('paste', (e)=>{
+      try{
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        const url = extractTikTokUrl(text);
+        if(url){
+          linkInput.value = url;
+          // subtle highlight
+          linkInput.focus();
+        }
+      }catch(err){}
+    });
+
+    // prevent canvas from blocking touch scroll
+    canvas.style.pointerEvents = 'none';
+  </script>
+</body>
+</html>
